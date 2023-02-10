@@ -1,8 +1,20 @@
 [package]
-name = "RustCommandLineCalculator"
-version = "0.1.0"
+name = "rust_command_line_calculator"
+version = "0.1.1"
 edition = "2021"
+authors = ["Christoph J. Scherr <software@cscherr.de>"]
+license = "GPL3"
+description = "fast, scriptable calculator designed to run right in your shell"
+readme = "README.md"
+homepage = "https://github.com/PlexSheep/RustCommandLineCalculator"
+repository = "https://github.com/PlexSheep/RustCommandLineCalculator"
+keywords = ["cli", "calculator", "scriptable"]
+categories = ["command-line-utilities"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "rclc"
+path = "src/main.rs"
 
 [dependencies]
+clap = { version = "4.0", features = ["derive"] }
+anyhow = "1.0"
