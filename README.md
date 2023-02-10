@@ -20,5 +20,5 @@ compiled binary executable to `/usr/local/bin`.
 | Supported Architectures | Arch   |
 |-------------------------|--------|
 | Current                 | x86_64 |
-| Planned                 | arm    |
-| Not Planned             | legacy |
+| Planned                 | major arm |
+| Not Planned             | any legacy |
