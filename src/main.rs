@@ -4,32 +4,30 @@ mod expression_parser;
 mod linear_algebra;
 
 use expression_parser::Expression;
+use expression_parser::Task;
 
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Arg {
+//    /// Optional subcommand
+//    #[command(subcommand)]
+//    command: Option<Commands>,
+
     /// Show verbose output
     #[arg(short, long)]
     verbose: bool,
 
-    /// Show debug output
-    #[arg(short, long, default_value_t = false)]
-    debug: bool,
-
-    #[command(subcommand)]
-    command: Option<Commands>,
-
     /// An expression that should be used to calculate something
-    expression_texts: Vec<String>,
+    expressions: Vec<String>,
 }
 
-#[derive(Subcommand)]
-enum Commands {
-    /// Assert if two expressions are equal to each other
-    Equal {
-    }
-}
+//#[derive(Subcommand)]
+//enum Commands {
+//    /// Assert if two expressions are equal to each other
+//    Equal {
+//    }
+//}
 
 fn main() {
     let args = Arg::parse();
@@ -40,11 +38,14 @@ fn main() {
     // TODO implement splitting of expressions, currently they are made only into a single big
     // expression text
     let mut expression_texts_concat: Vec<String> = Vec::new();
-    expression_texts_concat.push(args.expression_texts.join(" ").trim().to_string());
+    expression_texts_concat.push(args.expressions.join(" ").trim().to_string());
 
     for expression_text in expression_texts_concat {
-        expression_vec.push(Expression::new(expression_text));
+        expression_vec.push(Expression::new(expression_text, Task::None));
     }
-    dbg!(expression_vec);
+
+    for expression in expression_vec {
+        expression.process();
+    }
 
 }

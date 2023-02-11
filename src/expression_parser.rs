@@ -5,11 +5,11 @@ use regex::Regex;
 // configure possible Tasks.
 // None means, the Expression doesn't send it's Value to a Task Handler
 #[derive(Debug)]    // automatically generate Debug Formatter
-enum Task {
+pub enum Task {
     None,
     Sqrt,
     Power,
-    Log,
+    Log(u64),
 }
 
 // How to clone a Task, i was supprised I had to do it myself.
@@ -20,11 +20,23 @@ impl Clone for Task {
             Task::None => Task::None,
             Task::Sqrt => Task::Sqrt,
             Task::Power => Task::Power,
-            Task::Log => Task::Log,
+            Task::Log(base) => Task::Log(*base), // TODO add base for log
         }
     }
 }
 
+impl Task {
+    pub fn new(task_text: &str) -> Task {
+        match task_text {
+            "none" => Task::None,
+            "sqrt" => Task::Sqrt,
+            "power"|"pow" => Task::Power,
+            "log"|"ln" => Task::Log(10),    // TODO add base
+            // what to do if a bad task was given:
+            &_ => {eprintln!("Bad Task: {}", task_text); std::process::exit(1); },
+        }
+    }
+}
 // An Expression is something that can be calculated. 20+5 is an expression. Expressions can 
 // contain other
 // Expressions and have tasks: 20+sqrt(20+5)
@@ -75,21 +87,59 @@ impl Clone for Expression{
 impl Expression {
     /*
      * Main function for making text into Expression
+     * example: "12 + log_10(10 + 15) + 3"
+     * has a sub expression log_10(10 + 5), which has Task::Log with base 10
      */
-    pub fn new(expression_text: String) -> Expression {
+    pub fn new(expression_text: String, task: Task) -> Expression {
 
         // find children
-        let re_sub_expression = Regex::new(r"\w+\(.+\)").unwrap();
+        // TODO add error for unused task parameters
+        let re_sub_expression = Regex::new(r"\w+\(.+?\)").unwrap();
         if re_sub_expression.is_match(&expression_text) {
+            let mut children: Vec<Expression> = Vec::new();
             for sub_expression_text in re_sub_expression.captures_iter(&expression_text) {
-                println!("{}", &sub_expression_text[0]);
+                // if any task parameters are set ( syntax: task_para(expression) )
+                if sub_expression_text[0].contains('_') {
+                let task_and_expr: Vec<&str> = sub_expression_text[0].split(['_', '(']).collect();
+
+                let task_text = task_and_expr[0].clone().to_lowercase();
+                let task_param = task_and_expr[1].clone().to_string();
+                let task = match task_text.as_str() {
+                    "none" => Task::None,
+                    "sqrt" => Task::Sqrt,
+                    "power" => Task::Power,
+                    "log" => {let base: u64 = task_param.parse().unwrap(); Task::Log(base)},
+                    // what to do if a bad task was given:
+                    &_ => {eprintln!("Bad Task: {}", task_text); std::process::exit(1); },
+                };
+                let expression_inner = task_and_expr[2].clone().to_string();
+                children.push(Expression::new(expression_inner, task));
+                }
+                // if there are no parameters we need to do diffrent splitting and assume defaults
+                else {
+                let task_and_expr: Vec<&str> = sub_expression_text[0].split(['(']).collect();
+
+                let task_text = task_and_expr[0].clone().to_lowercase();
+                let task = match task_text.as_str() {
+                    "none" => Task::None,
+                    "sqrt" => Task::Sqrt,
+                    "power" => Task::Power,
+                    "log" => Task::Log(10),
+                    // what to do if a bad task was given:
+                    &_ => {eprintln!("Bad Task: {}", task_text); std::process::exit(1); },
+                };
+                let expression_inner = task_and_expr[1].clone().to_string();
+                children.push(Expression::new(expression_inner, task));
+                }
             }
+            #[cfg(debug_assertions)]
+            dbg!(children);
         }
 
         let expression = Expression {
             text: expression_text,
             // TODO generate these from the text!
-            task: Task::None,
+            task: task,
             complex: false,
             inner_value: 0.0,
             outer_value: 0.0,
@@ -97,4 +147,9 @@ impl Expression {
         };
         expression
     }
+
+    pub fn process(&self) {
+        println!("{}", self.text);
+    }
 }
+
