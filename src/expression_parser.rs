@@ -26,8 +26,9 @@ impl Clone for Task {
 }
 
 impl Task {
-    pub fn new(task_text: &str) -> Task {
-        match task_text {
+    pub fn new(task_text: &str, task_param: &str) -> Task {
+        let task_text = task_text.to_lowercase();
+        match task_text.as_str() {
             "none" => Task::None,
             "sqrt" => Task::Sqrt,
             "power"|"pow" => Task::Power,
@@ -94,46 +95,41 @@ impl Expression {
 
         // find children
         // TODO add error for unused task parameters
-        let re_sub_expression = Regex::new(r"\w+\(.+?\)").unwrap();
+        // TODO add supprot for truly recursie expressions, currently only one expression can be in
+        // a root expression.
+        let re_sub_expression = Regex::new(r"\w+\(.+?\)").unwrap(); // FIXME doesnt support nested
+                                                                    // expressions!!!
         if re_sub_expression.is_match(&expression_text) {
             let mut children: Vec<Expression> = Vec::new();
             for sub_expression_text in re_sub_expression.captures_iter(&expression_text) {
                 // if any task parameters are set ( syntax: task_para(expression) )
                 if sub_expression_text[0].contains('_') {
-                let task_and_expr: Vec<&str> = sub_expression_text[0].split(['_', '(']).collect();
-
-                let task_text = task_and_expr[0].clone().to_lowercase();
-                let task_param = task_and_expr[1].clone().to_string();
-                let task = match task_text.as_str() {
-                    "none" => Task::None,
-                    "sqrt" => Task::Sqrt,
-                    "power" => Task::Power,
-                    "log" => {let base: u64 = task_param.parse().unwrap(); Task::Log(base)},
-                    // what to do if a bad task was given:
-                    &_ => {eprintln!("Bad Task: {}", task_text); std::process::exit(1); },
-                };
-                let expression_inner = task_and_expr[2].clone().to_string();
-                children.push(Expression::new(expression_inner, task));
+                    let task_and_expr: Vec<&str> = sub_expression_text[0].split(['_', '(']).collect();
+                    #[cfg(debug_assertions)]
+                    dbg!(&task_and_expr);
+                    let task = Task::new(task_and_expr[0], task_and_expr[1]);                
+                    let mut expression_inner = task_and_expr[2].clone().to_string();
+                    #[cfg(debug_assertions)]
+                    dbg!(&expression_inner);
+                    expression_inner.pop();
+                    #[cfg(debug_assertions)]
+                    dbg!(&expression_inner);
+                    children.push(Expression::new(expression_inner, task));
                 }
                 // if there are no parameters we need to do diffrent splitting and assume defaults
                 else {
-                let task_and_expr: Vec<&str> = sub_expression_text[0].split(['(']).collect();
-
-                let task_text = task_and_expr[0].clone().to_lowercase();
-                let task = match task_text.as_str() {
-                    "none" => Task::None,
-                    "sqrt" => Task::Sqrt,
-                    "power" => Task::Power,
-                    "log" => Task::Log(10),
-                    // what to do if a bad task was given:
-                    &_ => {eprintln!("Bad Task: {}", task_text); std::process::exit(1); },
-                };
-                let expression_inner = task_and_expr[1].clone().to_string();
-                children.push(Expression::new(expression_inner, task));
+                    let task_and_expr: Vec<&str> = sub_expression_text[0].split(['(']).collect();
+                    #[cfg(debug_assertions)]
+                    dbg!(&task_and_expr);
+                    let task_text = task_and_expr[0].clone().to_lowercase();
+                    let task = Task::new(&task_text, "");                
+                    let mut expression_inner = task_and_expr[1].clone().to_string();
+                    expression_inner.pop();
+                    #[cfg(debug_assertions)]
+                    dbg!(&expression_inner);
+                    children.push(Expression::new(expression_inner, task));
                 }
             }
-            #[cfg(debug_assertions)]
-            dbg!(children);
         }
 
         let expression = Expression {
@@ -145,6 +141,8 @@ impl Expression {
             outer_value: 0.0,
             children: Vec::new(),
         };
+        #[cfg(debug_assertions)]
+        dbg!(&expression);
         expression
     }
 
