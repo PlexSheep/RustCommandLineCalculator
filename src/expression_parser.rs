@@ -1,4 +1,6 @@
 use std::fmt;
+use std::collections::HashMap;
+use std::hash::Hash;
 use regex::Regex;
 
 // In an expression like `sqrt(25)` the Task would correspond to `sqrt`. This is the enum to 
@@ -82,6 +84,59 @@ impl Clone for Expression{
     }
 }
 
+fn find_brace_groups(haystack: String) -> Vec<Vec<(usize, usize)>> {
+
+        // TODO add support for diffrent braces
+        // TODO add error if not all braces are closed
+        let mut parenthesis_group: Vec<(usize, usize)> = Vec::new();
+        let mut parenthesis_open: usize = 0;
+        let mut parenthesis_open_processed: usize = 0;
+        let mut parenthesis_closed_processed: usize = 0;
+        let mut parenthesis_last_opened: Vec<usize> = Vec::new();
+        //let mut brackets_group: Vec<(usize, usize)> = Vec::new();
+        //let mut brackets_open: usize = 0;
+        //let mut square_braces_group: Vec<(usize, usize)> = Vec::new();
+        //let mut square_braces_open: usize = 0;
+        // first open stuff
+        for (index, char) in haystack.chars().enumerate() {
+            match char {
+                '(' => { 
+                    #[cfg(debug_assertions)]
+                    {
+                    dbg!(char);
+                    dbg!(index);
+                    }
+                    parenthesis_group.push((index, 0)); 
+                    parenthesis_open = parenthesis_open + 1;
+                    parenthesis_last_opened.push(parenthesis_open_processed);
+                    parenthesis_open_processed = parenthesis_open_processed + 1;
+                },
+                ')' => { 
+                    let len = parenthesis_group.len(); 
+                    #[cfg(debug_assertions)]
+                    {
+                    dbg!(char);
+                    dbg!(index);
+                    dbg!(parenthesis_last_opened.len());
+                    dbg!(parenthesis_last_opened[parenthesis_last_opened.len() - 1]);
+                    }
+                    parenthesis_group[parenthesis_last_opened[parenthesis_last_opened.len() - 1]].1 = index;
+                    parenthesis_open = parenthesis_open - 1;
+                    parenthesis_closed_processed = parenthesis_closed_processed + 1;
+                    parenthesis_last_opened.pop();
+                    // TODO add error if no parenthesis is open yet.
+                },
+                _ => (),
+            }
+        }
+        // now iterate backwards and search for closing things
+
+        let brace_groups = vec![parenthesis_group/*, square_braces_group, brackets_group*/];
+        #[cfg(debug_assertions)]
+        dbg!(&brace_groups);
+        return brace_groups;
+}
+
 /*
  * Main logic for the Expression struct
  */
@@ -93,48 +148,25 @@ impl Expression {
      */
     pub fn new(expression_text: String, task: Task) -> Expression {
 
-        // find children
-        // TODO add error for unused task parameters
-        // TODO add supprot for truly recursie expressions, currently only one expression can be in
-        // a root expression.
-        let re_sub_expression = Regex::new(r"\w+\(.+?\)").unwrap(); // FIXME doesnt support nested
-                                                                    // expressions!!!
-        if re_sub_expression.is_match(&expression_text) {
+        let re_contains_sub_expression= Regex::new(r"(\(.*\))|(\[.*\])|(\{.*\})").unwrap();
+        if re_contains_sub_expression.is_match(expression_text.as_str()) {
+            let brace_groups: Vec<Vec<(usize, usize)>> = find_brace_groups(expression_text.clone());
+
+            let mut brace_groups_texts: Vec<String> = Vec::new();
             let mut children: Vec<Expression> = Vec::new();
-            for sub_expression_text in re_sub_expression.captures_iter(&expression_text) {
-                // if any task parameters are set ( syntax: task_para(expression) )
-                if sub_expression_text[0].contains('_') {
-                    let task_and_expr: Vec<&str> = sub_expression_text[0].split(['_', '(']).collect();
-                    #[cfg(debug_assertions)]
-                    dbg!(&task_and_expr);
-                    let task = Task::new(task_and_expr[0], task_and_expr[1]);                
-                    let mut expression_inner = task_and_expr[2].clone().to_string();
-                    #[cfg(debug_assertions)]
-                    dbg!(&expression_inner);
-                    expression_inner.pop();
-                    #[cfg(debug_assertions)]
-                    dbg!(&expression_inner);
-                    children.push(Expression::new(expression_inner, task));
-                }
-                // if there are no parameters we need to do diffrent splitting and assume defaults
-                else {
-                    let task_and_expr: Vec<&str> = sub_expression_text[0].split(['(']).collect();
-                    #[cfg(debug_assertions)]
-                    dbg!(&task_and_expr);
-                    let task_text = task_and_expr[0].clone().to_lowercase();
-                    let task = Task::new(&task_text, "");                
-                    let mut expression_inner = task_and_expr[1].clone().to_string();
-                    expression_inner.pop();
-                    #[cfg(debug_assertions)]
-                    dbg!(&expression_inner);
-                    children.push(Expression::new(expression_inner, task));
+
+            for brace_group in brace_groups {
+                for pair in brace_group {
+                    let text = &expression_text[pair.0..pair.1 + 1];
+                    let text = &text[1..text.len() - 1];
+                    dbg!(text);
                 }
             }
-        }
+        } 
+
 
         let expression = Expression {
             text: expression_text,
-            // TODO generate these from the text!
             task: task,
             complex: false,
             inner_value: 0.0,
@@ -151,3 +183,17 @@ impl Expression {
     }
 }
 
+enum Brace {
+    Open(char),
+    Closed(char),
+}
+
+impl Brace {
+    pub fn new(c: char) -> Option<Brace> {
+        match c {
+            '{' | '[' | '(' => Some(Brace::Open(c)),
+            '}' | ']' | ')' => Some(Brace::Closed(c)),
+            _ => None,
+        }
+    }
+}
