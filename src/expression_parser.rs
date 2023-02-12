@@ -1,7 +1,6 @@
 use std::fmt;
-use std::collections::HashMap;
-use std::hash::Hash;
 use regex::Regex;
+
 
 // In an expression like `sqrt(25)` the Task would correspond to `sqrt`. This is the enum to 
 // configure possible Tasks.
@@ -9,9 +8,9 @@ use regex::Regex;
 #[derive(Debug)]    // automatically generate Debug Formatter
 pub enum Task {
     None,
-    Sqrt,
-    Power,
-    Log(u64),
+    Root(u64),
+    Power(f64),
+    Log(f64),
 }
 
 // How to clone a Task, i was supprised I had to do it myself.
@@ -20,8 +19,8 @@ impl Clone for Task {
         // This can probably be done cleaner than with a verbose match. FIXME
         match self {
             Task::None => Task::None,
-            Task::Sqrt => Task::Sqrt,
-            Task::Power => Task::Power,
+            Task::Root(depth) => Task::Root(*depth),
+            Task::Power(exp) => Task::Power(*exp),
             Task::Log(base) => Task::Log(*base), // TODO add base for log
         }
     }
@@ -29,12 +28,51 @@ impl Clone for Task {
 
 impl Task {
     pub fn new(task_text: &str, task_param: &str) -> Task {
+        if task_text.is_empty() {
+            return Task::None;
+        }
         let task_text = task_text.to_lowercase();
         match task_text.as_str() {
             "none" => Task::None,
-            "sqrt" => Task::Sqrt,
-            "power"|"pow" => Task::Power,
-            "log"|"ln" => Task::Log(10),    // TODO add base
+            "sqrt"|"root" => {
+                if task_param.is_empty() {
+                    return Task::Root(2);
+                }
+                let pot_param = task_param.parse::<u64>();
+                match pot_param {
+                    Ok(value) => {Task::Root(value)},
+                    Err(error) => {
+                        eprintln!("could not parse task parameter: {error}"); 
+                        std::process::exit(1);
+                    },
+                }
+            },
+            "power"|"pow"|"sq" => {
+                if task_param.is_empty() {
+                    return Task::Power(2.0);
+                }
+                let pot_param = task_param.parse::<f64>();
+                match pot_param {
+                    Ok(value) => {Task::Power(value)},
+                    Err(error) => {
+                        eprintln!("could not parse task parameter: {error}"); 
+                        std::process::exit(1);
+                    },
+                }
+            },
+            "log"|"ln" => {
+                if task_param.is_empty() {
+                    return Task::Log(10.0);
+                }
+                let pot_param = task_param.parse::<f64>();
+                match pot_param {
+                    Ok(value) => {Task::Log(value)},
+                    Err(error) => {
+                        eprintln!("could not parse task parameter: {error}"); 
+                        std::process::exit(1);
+                    },
+                }
+            },
             // what to do if a bad task was given:
             &_ => {eprintln!("Bad Task: {}", task_text); std::process::exit(1); },
         }
@@ -42,7 +80,8 @@ impl Task {
 }
 // An Expression is something that can be calculated. 20+5 is an expression. Expressions can 
 // contain other
-// Expressions and have tasks: 20+sqrt(20+5)
+// Expressions and have tasks: 20+log_10(20+5)
+// Tasks may have parameters, denoted using an underscore '_'
 // Expressions are marked down with braces and a task before those braces:
 // task(Expression)
 // once the Value of the Expression got calculated, the calculated value should be sent to the 
@@ -112,7 +151,6 @@ fn find_brace_groups(haystack: String) -> Vec<Vec<(usize, usize)>> {
                     parenthesis_open_processed = parenthesis_open_processed + 1;
                 },
                 ')' => { 
-                    let len = parenthesis_group.len(); 
                     #[cfg(debug_assertions)]
                     {
                     dbg!(char);
@@ -162,12 +200,29 @@ impl Expression {
                     let text = &expression_text[pair.0..pair.1 + 1];
                     let text = &text[1..text.len() - 1];
                     #[cfg(debug_assertions)]
-                    dbg!(text);
                     brace_groups_texts.push(text.to_string());
                     // we have the expression_text, now we just need to get the task until we can
                     // pass these parameters into Expression::new(). This is the recursive part.
                     let possible_task = &expression_text[..pair.0].chars().rev().collect::<String>();
-                    dbg!(possible_task);
+                    let mut stop_at: usize = 0;
+                    // TODO check for task parameters
+                    for (index, char) in possible_task.chars().enumerate() {
+                        stop_at = index;
+                        if !(char.is_alphanumeric() | (char == '.') | (char == '_')) {
+                            break;
+                        }
+                    }
+                    let task_text_full = possible_task.clone()[..stop_at + 1].chars().rev().collect::<String>();
+                    let task: Task;
+                    if task_text_full.contains('_') {
+                        let split: Vec<&str> = task_text_full.split('_').collect();
+                        task = Task::new(split[0], split[1]);
+                    }
+                    else {
+                        task = Task::new(task_text_full.as_str(), "");
+                    }
+                    let child = Expression::new(text.to_string(), task);
+                    children.push(child);
                 }
             }
         } 
