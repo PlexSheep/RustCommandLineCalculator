@@ -1,6 +1,16 @@
 use std::fmt;
+use std::collections::HashMap;
 use regex::Regex;
 
+
+pub const OPERATORS: [char; 5] = ['+', '-', '*', '/', '^'];
+
+fn normalize_string(to_normalize: String) -> String {
+    let mut normalized_text = to_normalize;
+    normalized_text.retain(|c| !c.is_whitespace());
+    normalized_text = normalized_text.to_string();
+    normalized_text
+}
 
 // In an expression like `sqrt(25)` the Task would correspond to `sqrt`. This is the enum to 
 // configure possible Tasks.
@@ -125,54 +135,54 @@ impl Clone for Expression{
 
 fn find_brace_groups(haystack: String) -> Vec<Vec<(usize, usize)>> {
 
-        // TODO add support for diffrent braces
-        // TODO add error if not all braces are closed
-        let mut parenthesis_group: Vec<(usize, usize)> = Vec::new();
-        let mut parenthesis_open: usize = 0;
-        let mut parenthesis_open_processed: usize = 0;
-        let mut parenthesis_closed_processed: usize = 0;
-        let mut parenthesis_last_opened: Vec<usize> = Vec::new();
-        //let mut brackets_group: Vec<(usize, usize)> = Vec::new();
-        //let mut brackets_open: usize = 0;
-        //let mut square_braces_group: Vec<(usize, usize)> = Vec::new();
-        //let mut square_braces_open: usize = 0;
-        // first open stuff
-        for (index, char) in haystack.chars().enumerate() {
-            match char {
-                '(' => { 
-                    #[cfg(debug_assertions)]
-                    {
+    // TODO add support for diffrent braces
+    // TODO add error if not all braces are closed
+    let mut parenthesis_group: Vec<(usize, usize)> = Vec::new();
+    let mut parenthesis_open: usize = 0;
+    let mut parenthesis_open_processed: usize = 0;
+    let mut parenthesis_closed_processed: usize = 0;
+    let mut parenthesis_last_opened: Vec<usize> = Vec::new();
+    //let mut brackets_group: Vec<(usize, usize)> = Vec::new();
+    //let mut brackets_open: usize = 0;
+    //let mut square_braces_group: Vec<(usize, usize)> = Vec::new();
+    //let mut square_braces_open: usize = 0;
+    // first open stuff
+    for (index, char) in haystack.chars().enumerate() {
+        match char {
+            '(' => { 
+                #[cfg(debug_assertions)]
+                {
                     dbg!(char);
                     dbg!(index);
-                    }
-                    parenthesis_group.push((index, 0)); 
-                    parenthesis_open = parenthesis_open + 1;
-                    parenthesis_last_opened.push(parenthesis_open_processed);
-                    parenthesis_open_processed = parenthesis_open_processed + 1;
-                },
-                ')' => { 
-                    #[cfg(debug_assertions)]
-                    {
+                }
+                parenthesis_group.push((index, 0)); 
+                parenthesis_open = parenthesis_open + 1;
+                parenthesis_last_opened.push(parenthesis_open_processed);
+                parenthesis_open_processed = parenthesis_open_processed + 1;
+            },
+            ')' => { 
+                #[cfg(debug_assertions)]
+                {
                     dbg!(char);
                     dbg!(index);
                     dbg!(parenthesis_last_opened.len());
                     dbg!(parenthesis_last_opened[parenthesis_last_opened.len() - 1]);
-                    }
-                    parenthesis_group[parenthesis_last_opened[parenthesis_last_opened.len() - 1]].1 = index;
-                    parenthesis_open = parenthesis_open - 1;
-                    parenthesis_closed_processed = parenthesis_closed_processed + 1;
-                    parenthesis_last_opened.pop();
-                    // TODO add error if no parenthesis is open yet.
-                },
-                _ => (),
-            }
+                }
+                parenthesis_group[parenthesis_last_opened[parenthesis_last_opened.len() - 1]].1 = index;
+                parenthesis_open = parenthesis_open - 1;
+                parenthesis_closed_processed = parenthesis_closed_processed + 1;
+                parenthesis_last_opened.pop();
+                // TODO add error if no parenthesis is open yet.
+            },
+            _ => (),
         }
-        // now iterate backwards and search for closing things
+    }
+    // now iterate backwards and search for closing things
 
-        let brace_groups = vec![parenthesis_group/*, square_braces_group, brackets_group*/];
-        #[cfg(debug_assertions)]
-        dbg!(&brace_groups);
-        return brace_groups;
+    let brace_groups = vec![parenthesis_group/*, square_braces_group, brackets_group*/];
+    #[cfg(debug_assertions)]
+    dbg!(&brace_groups);
+    return brace_groups;
 }
 
 /*
@@ -185,6 +195,8 @@ impl Expression {
      * has a sub expression log_10(10 + 5), which has Task::Log with base 10
      */
     pub fn new(expression_text: String, task: Task) -> Expression {
+
+        let expression_text = normalize_string(expression_text);
 
         let re_contains_sub_expression= Regex::new(r"(\(.*\))|(\[.*\])|(\{.*\})").unwrap();
         if re_contains_sub_expression.is_match(expression_text.as_str()) {
@@ -208,11 +220,11 @@ impl Expression {
                     // TODO check for task parameters
                     for (index, char) in possible_task.chars().enumerate() {
                         stop_at = index;
-                        if !(char.is_alphanumeric() | (char == '.') | (char == '_')) {
+                        if !(char.is_alphanumeric() | (char == '.') | (char == '_')) & (char == '+') {
                             break;
                         }
                     }
-                    let task_text_full = possible_task.clone()[..stop_at + 1].chars().rev().collect::<String>();
+                    let task_text_full = possible_task.clone()[..stop_at + 0].chars().rev().collect::<String>();
                     let task: Task;
                     if task_text_full.contains('_') {
                         let split: Vec<&str> = task_text_full.split('_').collect();
@@ -241,7 +253,20 @@ impl Expression {
         expression
     }
 
+    // calculate value for expression.
     pub fn process(&self) {
-        println!("{}", self.text);
+        let normalized_text = self.normalize_text();
+        // iterate through chars. Find logical groups, and add them into a hashmap.
+        let re_numeric = Regex::new(r"\d+(\.\d+)?");
+        todo!();
+        // no idea how to do this, seriously, this is so complicated, i wouldn't ever have thought
+        // this. I probably need to add a enum Operation and an enum Value to create a
+        // HashMap<String, Value> and match back the Value type to some real usable one? This is so
+        // complicated.
+    }
+
+    // wrapper for normalize_string()
+    fn normalize_text(&self) -> String {
+        normalize_string(self.text.clone())
     }
 }

@@ -10,10 +10,6 @@ use expression_parser::Task;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Arg {
-//    /// Optional subcommand
-//    #[command(subcommand)]
-//    command: Option<Commands>,
-
     ///Syntax: '1 + task_param(inner) + 1 '{n}
     ///{n}
     ///Specify an expression, any expression may contain child expressions, which can be denoted{n}
@@ -37,13 +33,6 @@ struct Arg {
     ///                                 parameter: specify base n, default is 10{n}
     expressions: Vec<String>,
 }
-
-//#[derive(Subcommand)]
-//enum Commands {
-//    /// Assert if two expressions are equal to each other
-//    Equal {
-//    }
-//}
 
 fn main() {
     let args = Arg::parse();
