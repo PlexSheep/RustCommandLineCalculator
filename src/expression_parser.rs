@@ -155,11 +155,19 @@ impl Expression {
             let mut brace_groups_texts: Vec<String> = Vec::new();
             let mut children: Vec<Expression> = Vec::new();
 
+            // 1 brace group per possible combination, by default, this is only (), so 1 iteration.
+            // This is still O(n¹) 
             for brace_group in brace_groups {
                 for pair in brace_group {
                     let text = &expression_text[pair.0..pair.1 + 1];
                     let text = &text[1..text.len() - 1];
+                    #[cfg(debug_assertions)]
                     dbg!(text);
+                    brace_groups_texts.push(text.to_string());
+                    // we have the expression_text, now we just need to get the task until we can
+                    // pass these parameters into Expression::new(). This is the recursive part.
+                    let possible_task = &expression_text[..pair.0].chars().rev().collect::<String>();
+                    dbg!(possible_task);
                 }
             }
         } 
@@ -180,20 +188,5 @@ impl Expression {
 
     pub fn process(&self) {
         println!("{}", self.text);
-    }
-}
-
-enum Brace {
-    Open(char),
-    Closed(char),
-}
-
-impl Brace {
-    pub fn new(c: char) -> Option<Brace> {
-        match c {
-            '{' | '[' | '(' => Some(Brace::Open(c)),
-            '}' | ']' | ')' => Some(Brace::Closed(c)),
-            _ => None,
-        }
     }
 }
