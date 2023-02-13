@@ -46,9 +46,8 @@ fn main() {
     expression_texts_concat.push(args.expressions.join(" ").trim().to_string());
 
     for expression_text in expression_texts_concat {
-        expression_vec.push(Expression::new(expression_text, Task::None));
+        expression_vec.push(Expression::new(expression_text.clone(), expression_text, Task::None, 0));
     }
-
     for expression in expression_vec {
         expression.process();
     }

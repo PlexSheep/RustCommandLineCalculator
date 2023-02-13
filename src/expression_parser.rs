@@ -1,9 +1,5 @@
 use std::fmt;
-use std::collections::HashMap;
 use regex::Regex;
-
-
-pub const OPERATORS: [char; 5] = ['+', '-', '*', '/', '^'];
 
 fn normalize_string(to_normalize: String) -> String {
     let mut normalized_text = to_normalize;
@@ -98,11 +94,12 @@ impl Task {
 // TaskHandler, if the Task of the Expression is not Task::None
 pub struct Expression {
     text: String,
+    full_text: String,
     task: Task,
     complex: bool,
-    inner_value: f64,
-    outer_value: f64,
+    outer_value: Option<f64>,
     children: Vec<Expression>,
+    depth: u8,
 }
 
 // Debug Formatter for Expression
@@ -110,11 +107,12 @@ impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Expression")
             .field("text", &self.text)
+            .field("full text", &self.full_text)
             .field("task", &self.task)
             .field("is complex?", &self.complex)
-            .field("inner value", &self.inner_value)
             .field("outer value", &self.outer_value)
             .field("children", &self.children)
+            .field("depth", &self.depth)
             .finish()
     }
 }
@@ -124,11 +122,12 @@ impl Clone for Expression{
     fn clone(&self) -> Self {
         Expression { 
             text: self.text.clone(), 
+            full_text: self.full_text.clone(), 
             task: self.task.clone(),
             complex: self.complex.clone(),  // TODO add support for complex numbers
-            inner_value: self.inner_value.clone(),
             outer_value: self.outer_value.clone(),
             children: self.children.clone(),
+            depth: self.depth.clone(),
         }
     }
 }
@@ -194,16 +193,24 @@ impl Expression {
      * example: "12 + log_10(10 + 15) + 3"
      * has a sub expression log_10(10 + 5), which has Task::Log with base 10
      */
-    pub fn new(expression_text: String, task: Task) -> Expression {
+    pub fn new(expression_text: String, expression_full_text: String, task: Task, depth: u8) -> Expression {
+
+        // check if we are too deep
+        if depth > 254 {
+            eprintln!("Expression '{}' has a too deep family tree. Maximum generations are 254.", expression_text);
+            std::process::exit(1);
+        }
 
         let expression_text = normalize_string(expression_text);
+        let mut task_text_full: String = "".to_string();
+        let mut children: Vec<Expression> = Vec::new();
 
         let re_contains_sub_expression= Regex::new(r"(\(.*\))|(\[.*\])|(\{.*\})").unwrap();
+
         if re_contains_sub_expression.is_match(expression_text.as_str()) {
             let brace_groups: Vec<Vec<(usize, usize)>> = find_brace_groups(expression_text.clone());
 
             let mut brace_groups_texts: Vec<String> = Vec::new();
-            let mut children: Vec<Expression> = Vec::new();
 
             // 1 brace group per possible combination, by default, this is only (), so 1 iteration.
             // This is still O(n¹) 
@@ -219,12 +226,12 @@ impl Expression {
                     let mut stop_at: usize = 0;
                     // TODO check for task parameters
                     for (index, char) in possible_task.chars().enumerate() {
-                        stop_at = index;
-                        if !(char.is_alphanumeric() | (char == '.') | (char == '_')) & (char == '+') {
+                        if !(char.is_alphanumeric() | (char == '.') | (char == '_')) | (char == '+') {
                             break;
                         }
+                        stop_at = index;
                     }
-                    let task_text_full = possible_task.clone()[..stop_at + 0].chars().rev().collect::<String>();
+                    task_text_full = possible_task.clone()[..stop_at+ 1].chars().rev().collect::<String>();
                     let task: Task;
                     if task_text_full.contains('_') {
                         let split: Vec<&str> = task_text_full.split('_').collect();
@@ -233,7 +240,9 @@ impl Expression {
                     else {
                         task = Task::new(task_text_full.as_str(), "");
                     }
-                    let child = Expression::new(text.to_string(), task);
+                    let child_full_text = task_text_full + "(" + text + ")";
+                    dbg!(&child_full_text);
+                    let child = Expression::new(text.to_string(), child_full_text, task, depth+1);
                     children.push(child);
                 }
             }
@@ -242,11 +251,12 @@ impl Expression {
 
         let expression = Expression {
             text: expression_text,
+            full_text: normalize_string(expression_full_text),
             task: task,
             complex: false,
-            inner_value: 0.0,
-            outer_value: 0.0,
-            children: Vec::new(),
+            outer_value: Some(0.0),
+            children: children,
+            depth: depth,
         };
         #[cfg(debug_assertions)]
         dbg!(&expression);
@@ -254,15 +264,33 @@ impl Expression {
     }
 
     // calculate value for expression.
-    pub fn process(&self) {
-        let normalized_text = self.normalize_text();
-        // iterate through chars. Find logical groups, and add them into a hashmap.
-        let re_numeric = Regex::new(r"\d+(\.\d+)?");
+    pub fn process(self) -> String {
+        let mut normalized_text = self.normalize_text();
+        //let re_numeric = Regex::new(r"\d+(\.\d+)?");
+        /*
+         *  Algorithm:
+         *  
+         *  First, search child expressions in normalized_text by searching for the text of all
+         *  children in normalized_text. If an expression is found, a value for it should be
+         *  calculated (recursive!) and the text should be substituted with the calculated value.
+         *  If a child expression is not found in the normalized_text, throw an error, as an
+         *  expression has a child but does not contain it's text. (note: a childs child
+         *  expressions are not the child expression of the original expression, so no need to
+         *  worry about the order of substituting texts for values.)
+         *
+         *  Once there are no more child expressions in the normalized_text, we can use the
+         *  shunting yards algorithm to calculate the result. I'm not yet sure, if I want to use
+         *  another developers shunting yard algorithm or implement it by myself.
+         */ 
+       
+        // iterate through children, substitute childrens text with childrens results (as string
+        // slice).
+        for child in self.children {
+            dbg!(normalized_text.replace(child.full_text.as_str(), "0"/* debug only */));
+            normalized_text = normalized_text.replace(child.full_text.as_str(), "0");
+        }
         todo!();
-        // no idea how to do this, seriously, this is so complicated, i wouldn't ever have thought
-        // this. I probably need to add a enum Operation and an enum Value to create a
-        // HashMap<String, Value> and match back the Value type to some real usable one? This is so
-        // complicated.
+
     }
 
     // wrapper for normalize_string()
