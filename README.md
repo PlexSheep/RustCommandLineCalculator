@@ -13,7 +13,7 @@ compiled binary executable to `/usr/local/bin`.
 # Compatability
 | Supported OS | OS                    |
 |--------------|-----------------------|
-| Current      | Linux                 |
+| Current      | Gnu/Linux             |
 | Planned      | Windows, OSX, FreeBSD |
 | Not Planned  | TempleOS              |
 
