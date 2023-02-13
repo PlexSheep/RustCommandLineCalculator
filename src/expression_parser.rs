@@ -149,24 +149,12 @@ fn find_brace_groups(haystack: String) -> Vec<Vec<(usize, usize)>> {
     for (index, char) in haystack.chars().enumerate() {
         match char {
             '(' => { 
-                #[cfg(debug_assertions)]
-                {
-                    dbg!(char);
-                    dbg!(index);
-                }
                 parenthesis_group.push((index, 0)); 
                 parenthesis_open = parenthesis_open + 1;
                 parenthesis_last_opened.push(parenthesis_open_processed);
                 parenthesis_open_processed = parenthesis_open_processed + 1;
             },
             ')' => { 
-                #[cfg(debug_assertions)]
-                {
-                    dbg!(char);
-                    dbg!(index);
-                    dbg!(parenthesis_last_opened.len());
-                    dbg!(parenthesis_last_opened[parenthesis_last_opened.len() - 1]);
-                }
                 parenthesis_group[parenthesis_last_opened[parenthesis_last_opened.len() - 1]].1 = index;
                 parenthesis_open = parenthesis_open - 1;
                 parenthesis_closed_processed = parenthesis_closed_processed + 1;
@@ -241,7 +229,6 @@ impl Expression {
                         task = Task::new(task_text_full.as_str(), "");
                     }
                     let child_full_text = task_text_full + "(" + text + ")";
-                    dbg!(&child_full_text);
                     let child = Expression::new(text.to_string(), child_full_text, task, depth+1);
                     children.push(child);
                 }
@@ -254,12 +241,10 @@ impl Expression {
             full_text: normalize_string(expression_full_text),
             task: task,
             complex: false,
-            outer_value: Some(0.0),
+            outer_value: None,
             children: children,
             depth: depth,
         };
-        #[cfg(debug_assertions)]
-        dbg!(&expression);
         expression
     }
 
@@ -283,14 +268,17 @@ impl Expression {
          *  another developers shunting yard algorithm or implement it by myself.
          */ 
        
+        // TODO check if we have any unknown values.
+        
         // iterate through children, substitute childrens text with childrens results (as string
         // slice).
         for child in self.children {
-            dbg!(normalized_text.replace(child.full_text.as_str(), "0"/* debug only */));
-            normalized_text = normalized_text.replace(child.full_text.as_str(), "0");
+            normalized_text = normalized_text.replace(child.full_text.clone().as_str(), child.process().as_str());
         }
-        todo!();
-
+        // TODO Shunting yards algorithm, as we now have only calculatable values left.
+        // Implement this as public module in shunting_yard.rs
+        // self.result = MYRESULT
+        return "RESULT_STILL_NOT_IMPLEMENTED".to_string();
     }
 
     // wrapper for normalize_string()

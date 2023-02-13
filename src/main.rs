@@ -48,8 +48,12 @@ fn main() {
     for expression_text in expression_texts_concat {
         expression_vec.push(Expression::new(expression_text.clone(), expression_text, Task::None, 0));
     }
-    for expression in expression_vec {
-        expression.process();
+    #[cfg(debug_assertions)]
+    {
+    dbg!(&expression_vec);
     }
-
+    for expression in expression_vec {
+        println!("{}", expression.process());
+    }
+    
 }
