@@ -1,4 +1,4 @@
-use std::{fmt, error::Error, num::IntErrorKind};
+use std::fmt;
 use regex::Regex;
 
 pub mod shunting_yard;
@@ -284,7 +284,7 @@ impl Expression {
                     eprintln!(
                         "Could not calculate result of child expression '{}': {}", 
                         child.text,
-                        "error placeholder TODO"
+                        err
                         );
                     std::process::exit(2);
                 }

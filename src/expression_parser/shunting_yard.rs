@@ -1,3 +1,4 @@
+use std::fmt;
 
 /*
  * Custom made implementation of the shunting yard algorithm.
@@ -17,11 +18,30 @@ enum Associativity {
     Left
 }
 
+impl fmt::Debug for Associativity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Associativity::Right => write!(f, "Right"),
+            Associativity::Left => write!(f, "Left"),
+        }
+    }
+}
+
 #[derive(PartialEq)]
 pub struct Operator {
     character: char,
     precedence: u8,
     associativity: Associativity
+}
+
+impl fmt::Debug for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Operator")
+            .field("character", &self.character)
+            .field("precedence", &self.precedence)
+            .field("associativity", &self.associativity)
+            .finish()
+    }
 }
 
 impl Operator {
@@ -69,7 +89,7 @@ const DIVISION: Operator = Operator {
 };
 
 const EXPONENTIATION: Operator = Operator {
-    character: '*',
+    character: '^',
     precedence: 2,
     associativity: Associativity::Right
 };
@@ -133,7 +153,7 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
                 // and
                 // (o2 has greater precedence than o1 or (o1 and o2 have the same precedence and o1
                 // is left associative))
-                while ((operator_stack.last().is_some()) & ((o2.precedence > o1.precedence) | ((o1.precedence == o2.precedence) & (o1.associativity == Associativity::Left)))) {
+                while (operator_stack.last().is_some()) & ((o2.precedence > o1.precedence) | ((o1.precedence == o2.precedence) & (o1.associativity == Associativity::Left))) {
                     // pop o2 from the operator stack into the output queue.
                     // after this debug statement, the operator_stack is empty for no reason!!!!
                     // FIXME
@@ -214,7 +234,7 @@ pub fn calc_reverse_polish_notation(rpn: Vec<String>) -> Result<f64, String> {
         dbg!(&group);
         // find out what the group is, an operator, a number, or a variable.
         // TODO add variables
-        if (!Operator::is_operator(group.chars().last().unwrap())) {
+        if !Operator::is_operator(group.chars().last().unwrap()) {
             let possible_num = group.parse::<f64>();
             match possible_num {
                 Ok(valid) => {stack.push(valid);},
@@ -227,10 +247,28 @@ pub fn calc_reverse_polish_notation(rpn: Vec<String>) -> Result<f64, String> {
         }
         else {
             let op: Operator = Operator::get_operator(group.chars().last().unwrap()).unwrap();
+            dbg!(&op);
             let right = stack.pop().unwrap();
             let left = stack.pop().unwrap();
+
             if op == ADDITION {
-                stack.push(right + left);
+                stack.push(left + right);
+            }
+
+            else if op == SUBTRACTION {
+                stack.push(left - right);
+            }
+
+            else if op == MULTIPLICATION {
+                stack.push(left * right);
+            }
+
+            else if op == DIVISION {
+                stack.push(left / right);
+            }
+
+            else if op == EXPONENTIATION {
+                stack.push(left.powf(right));
             }
 
             else {
