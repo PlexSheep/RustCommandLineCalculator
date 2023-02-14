@@ -301,7 +301,7 @@ impl Expression {
         match rpn {
             Ok(valid_rpn) => {
                 dbg!(&valid_rpn);
-                return shunting_yard::calc_reverse_polish_notation(&valid_rpn);
+                return shunting_yard::calc_reverse_polish_notation(valid_rpn);
             },
             Err(err) => {
                 eprintln!("Could not calculate a result for expression '{}': {err}", self.text);
