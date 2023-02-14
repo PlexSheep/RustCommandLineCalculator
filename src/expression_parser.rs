@@ -1,5 +1,7 @@
-use std::fmt;
+use std::{fmt, error::Error, num::IntErrorKind};
 use regex::Regex;
+
+pub mod shunting_yard;
 
 fn normalize_string(to_normalize: String) -> String {
     let mut normalized_text = to_normalize;
@@ -80,7 +82,9 @@ impl Task {
                 }
             },
             // what to do if a bad task was given:
-            &_ => {eprintln!("Bad Task: {}", task_text); std::process::exit(1); },
+            // this would be throwing an error and aborting
+            //&_ => {eprintln!("Bad Task: {}", task_text); std::process::exit(1); },
+            _ => Task::None,
         }
     }
 }
@@ -93,11 +97,11 @@ impl Task {
 // once the Value of the Expression got calculated, the calculated value should be sent to the 
 // TaskHandler, if the Task of the Expression is not Task::None
 pub struct Expression {
-    text: String,
+    pub text: String,
     full_text: String,
     task: Task,
     complex: bool,
-    outer_value: Option<f64>,
+    outer_value: Result<f64, String>,
     children: Vec<Expression>,
     depth: u8,
 }
@@ -190,7 +194,7 @@ impl Expression {
         }
 
         let expression_text = normalize_string(expression_text);
-        let mut task_text_full: String = "".to_string();
+        let mut task_text_full: String;
         let mut children: Vec<Expression> = Vec::new();
 
         let re_contains_sub_expression= Regex::new(r"(\(.*\))|(\[.*\])|(\{.*\})").unwrap();
@@ -206,20 +210,21 @@ impl Expression {
                 for pair in brace_group {
                     let text = &expression_text[pair.0..pair.1 + 1];
                     let text = &text[1..text.len() - 1];
-                    #[cfg(debug_assertions)]
                     brace_groups_texts.push(text.to_string());
                     // we have the expression_text, now we just need to get the task until we can
                     // pass these parameters into Expression::new(). This is the recursive part.
                     let possible_task = &expression_text[..pair.0].chars().rev().collect::<String>();
                     let mut stop_at: usize = 0;
-                    // TODO check for task parameters
                     for (index, char) in possible_task.chars().enumerate() {
-                        if !(char.is_alphanumeric() | (char == '.') | (char == '_')) | (char == '+') {
+                        if !(char.is_alphanumeric()) {
                             break;
                         }
                         stop_at = index;
                     }
-                    task_text_full = possible_task.clone()[..stop_at+ 1].chars().rev().collect::<String>();
+                    dbg!(&stop_at);
+                    // needed for none task: '1 + (1 + 1)'
+                    let fixup = if stop_at == 0 { 0 } else { 1 };
+                    task_text_full = possible_task.clone()[..stop_at+ fixup].chars().rev().collect::<String>();
                     let task: Task;
                     if task_text_full.contains('_') {
                         let split: Vec<&str> = task_text_full.split('_').collect();
@@ -235,21 +240,20 @@ impl Expression {
             }
         } 
 
-
         let expression = Expression {
             text: expression_text,
             full_text: normalize_string(expression_full_text),
-            task: task,
+            task,
             complex: false,
-            outer_value: None,
-            children: children,
-            depth: depth,
+            outer_value: Err("Value not yet calculated.".to_string()),
+            children,
+            depth,
         };
         expression
     }
 
     // calculate value for expression.
-    pub fn process(self) -> String {
+    pub fn process(self) -> Result<f64, String> {
         let mut normalized_text = self.normalize_text();
         //let re_numeric = Regex::new(r"\d+(\.\d+)?");
         /*
@@ -273,12 +277,37 @@ impl Expression {
         // iterate through children, substitute childrens text with childrens results (as string
         // slice).
         for child in self.children {
-            normalized_text = normalized_text.replace(child.full_text.clone().as_str(), child.process().as_str());
+            //normalized_text = normalized_text.replace(child.full_text.clone().as_str(), child.process().expect(self.text).as_str());
+            let child_full_text = match child.clone().process() {
+                Ok(result) => result.to_string(),
+                Err(err) => { 
+                    eprintln!(
+                        "Could not calculate result of child expression '{}': {}", 
+                        child.text,
+                        "error placeholder TODO"
+                        );
+                    std::process::exit(2);
+                }
+            };
+            dbg!(&child.full_text);
+            dbg!(&child_full_text);
+            normalized_text = normalized_text.replace(child.full_text.as_str(), child_full_text.as_str());
         }
+        dbg!(&normalized_text);
         // TODO Shunting yards algorithm, as we now have only calculatable values left.
         // Implement this as public module in shunting_yard.rs
         // self.result = MYRESULT
-        return "RESULT_STILL_NOT_IMPLEMENTED".to_string();
+        let rpn = shunting_yard::form_reverse_polish_notation(&normalized_text);
+        match rpn {
+            Ok(valid_rpn) => {
+                dbg!(&valid_rpn);
+                return shunting_yard::calc_reverse_polish_notation(&valid_rpn);
+            },
+            Err(err) => {
+                eprintln!("Could not calculate a result for expression '{}': {err}", self.text);
+                std::process::exit(2);
+            },
+        }
     }
 
     // wrapper for normalize_string()

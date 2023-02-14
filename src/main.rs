@@ -1,7 +1,6 @@
 use clap::Parser;
 
 mod expression_parser;
-mod linear_algebra;
 
 use expression_parser::Expression;
 use expression_parser::Task;
@@ -53,7 +52,14 @@ fn main() {
     dbg!(&expression_vec);
     }
     for expression in expression_vec {
-        println!("{}", expression.process());
+        match expression.clone().process() {
+            Ok(result) => {
+                println!("{result}");
+            },
+            Err(err) => {
+                eprintln!("Could not calculate expression '{}': {}", &expression.text, err);
+            }
+        }
     }
     
 }
