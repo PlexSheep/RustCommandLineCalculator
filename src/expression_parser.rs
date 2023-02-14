@@ -221,7 +221,8 @@ impl Expression {
                         }
                         stop_at = index;
                     }
-                    dbg!(&stop_at);
+                    #[cfg(debug_assertions)]
+                    {dbg!(&stop_at);}
                     // needed for none task: '1 + (1 + 1)'
                     let fixup = if stop_at == 0 { 0 } else { 1 };
                     task_text_full = possible_task.clone()[..stop_at+ fixup].chars().rev().collect::<String>();
@@ -289,18 +290,24 @@ impl Expression {
                     std::process::exit(2);
                 }
             };
+            #[cfg(debug_assertions)]{
             dbg!(&child.full_text);
             dbg!(&child_full_text);
+            }
             normalized_text = normalized_text.replace(child.full_text.as_str(), child_full_text.as_str());
         }
+        #[cfg(debug_assertions)]{
         dbg!(&normalized_text);
+        }
         // TODO Shunting yards algorithm, as we now have only calculatable values left.
         // Implement this as public module in shunting_yard.rs
         // self.result = MYRESULT
         let rpn = shunting_yard::form_reverse_polish_notation(&normalized_text);
         match rpn {
             Ok(valid_rpn) => {
+                #[cfg(debug_assertions)]{
                 dbg!(&valid_rpn);
+                }
                 return shunting_yard::calc_reverse_polish_notation(valid_rpn);
             },
             Err(err) => {

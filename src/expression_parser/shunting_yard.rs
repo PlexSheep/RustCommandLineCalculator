@@ -78,19 +78,19 @@ const SUBTRACTION: Operator = Operator {
 
 const MULTIPLICATION: Operator = Operator {
     character: '*',
-    precedence: 2,
+    precedence: 3,
     associativity: Associativity::Left
 };
 
 const DIVISION: Operator = Operator {
     character: '/',
-    precedence: 2,
+    precedence: 3,
     associativity: Associativity::Left
 };
 
 const EXPONENTIATION: Operator = Operator {
     character: '^',
-    precedence: 2,
+    precedence: 4,
     associativity: Associativity::Right
 };
 
@@ -108,6 +108,7 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
     while !(input_queue.is_empty()) {
         // read a token
         let token: char = input_queue.pop().unwrap();
+        #[cfg(debug_assertions)]
         dbg!(&token);
 
         // if the token is:
@@ -145,6 +146,7 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
 
             // while there is an operator o2 at the top of the stack 
             if !operator_stack.is_empty() {
+                #[cfg(debug_assertions)]
                 dbg!(&operator_stack);
                 let o2 = match Operator::get_operator(*(operator_stack.clone().last().clone().unwrap())) {
                     Some(valid_op) => valid_op,
@@ -183,6 +185,7 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
     if currently_processing_numeric_group {
         output_queue.push(current_numeric_group);
     }
+    #[cfg(debug_assertions)]
     dbg!(&output_queue);
 
     // afterwards, process any operators still on the operator_stack
@@ -190,6 +193,7 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
         output_queue.push(vec![operator_stack.pop().unwrap()]);
     }
 
+    #[cfg(debug_assertions)]
     dbg!(&output_queue);
     let mut rpn: Vec<String> = Vec::new();
     for group in output_queue {
@@ -231,6 +235,7 @@ pub fn calc_reverse_polish_notation(rpn: Vec<String>) -> Result<f64, String> {
     let mut stack: Vec<f64> = Vec::new();
 
     for group in rpn {
+        #[cfg(debug_assertions)]
         dbg!(&group);
         // find out what the group is, an operator, a number, or a variable.
         // TODO add variables
@@ -243,10 +248,12 @@ pub fn calc_reverse_polish_notation(rpn: Vec<String>) -> Result<f64, String> {
                     std::process::exit(2);
                 },
             }
+            #[cfg(debug_assertions)]
             dbg!(&stack);
         }
         else {
             let op: Operator = Operator::get_operator(group.chars().last().unwrap()).unwrap();
+            #[cfg(debug_assertions)]
             dbg!(&op);
             let right = stack.pop().unwrap();
             let left = stack.pop().unwrap();
@@ -282,6 +289,7 @@ pub fn calc_reverse_polish_notation(rpn: Vec<String>) -> Result<f64, String> {
         return Err("result stack empty".to_string());
     }
     if stack.len() > 1 {
+        #[cfg(debug_assertions)]
         dbg!(stack);
         return Err("result stack has too many results.".to_string());
     }
