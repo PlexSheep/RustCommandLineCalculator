@@ -1,3 +1,4 @@
+use std::fmt;
 
 /*
  * Custom made implementation of the shunting yard algorithm.
@@ -17,11 +18,30 @@ enum Associativity {
     Left
 }
 
+impl fmt::Debug for Associativity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Associativity::Right => write!(f, "Right"),
+            Associativity::Left => write!(f, "Left"),
+        }
+    }
+}
+
 #[derive(PartialEq)]
 pub struct Operator {
     character: char,
     precedence: u8,
     associativity: Associativity
+}
+
+impl fmt::Debug for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Operator")
+            .field("character", &self.character)
+            .field("precedence", &self.precedence)
+            .field("associativity", &self.associativity)
+            .finish()
+    }
 }
 
 impl Operator {
@@ -69,7 +89,7 @@ const DIVISION: Operator = Operator {
 };
 
 const EXPONENTIATION: Operator = Operator {
-    character: '*',
+    character: '^',
     precedence: 2,
     associativity: Associativity::Right
 };
@@ -89,7 +109,7 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
         // read a token
         let token: char = input_queue.pop().unwrap();
         dbg!(&token);
-            
+
         // if the token is:
         // a number:
         if token.is_numeric() | (token == '.') {
@@ -122,25 +142,25 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
                 Some(valid_op) => valid_op,
                 None => {panic!("Operator '{}' not found.", token);},
             };
-            
+
             // while there is an operator o2 at the top of the stack 
             if !operator_stack.is_empty() {
                 dbg!(&operator_stack);
                 let o2 = match Operator::get_operator(*(operator_stack.clone().last().clone().unwrap())) {
                     Some(valid_op) => valid_op,
-                None => {panic!("Operator '{}' not found.", token);},
+                    None => {panic!("Operator '{}' not found.", token);},
                 };
                 // and
                 // (o2 has greater precedence than o1 or (o1 and o2 have the same precedence and o1
                 // is left associative))
-                while ((operator_stack.last().is_some()) & ((o2.precedence > o1.precedence) | ((o1.precedence == o2.precedence) & (o1.associativity == Associativity::Left)))) {
+                while (operator_stack.last().is_some()) & ((o2.precedence > o1.precedence) | ((o1.precedence == o2.precedence) & (o1.associativity == Associativity::Left))) {
                     // pop o2 from the operator stack into the output queue.
                     // after this debug statement, the operator_stack is empty for no reason!!!!
                     // FIXME
                     let my_c = match operator_stack.pop() {
                         Some(c) => c,
                         None => {panic!("weirdly gone!")},
-                        };
+                    };
                     output_queue.push(vec![my_c]);
                 }
             }
@@ -149,10 +169,10 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
         /*
         // Unnessecary, will be processed by the expression parser
         else if '(' == token {
-            println!("(");
+        println!("(");
         }
         else if ')' == token {
-            println!(")");
+        println!(")");
         }
         */
         else {
@@ -180,5 +200,91 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
 
 // after we have the rpn, we may want to calculate the values with it.
 pub fn calc_reverse_polish_notation(rpn: Vec<String>) -> Result<f64, String> {
-    Ok(0.0)
+
+    //          # function to evaluate reverse polish notation
+    //      def evaluate(expression):
+    //        # splitting expression at whitespaces
+    //        expression = expression.split()
+    //        # stack
+    //        stack = []
+    //        # iterating expression
+    //        for ele in expression:
+    //          # ele is a number
+    //          if ele not in '/*+-':
+    //            stack.append(int(ele))
+    //          # ele is an operator
+    //          else:
+    //            # getting operands
+    //            right = stack.pop()
+    //            left = stack.pop()
+    //            # performing operation according to operator
+    //            if ele == '+':
+    //              stack.append(left + right)
+    //            elif ele == '-':
+    //              stack.append(left - right)
+    //            elif ele == '*':
+    //              stack.append(left * right)
+    //            elif ele == '/':
+    //              stack.append(int(left / right))
+    //        # return final answer.
+    //        return stack.pop()
+    let mut stack: Vec<f64> = Vec::new();
+
+    for group in rpn {
+        dbg!(&group);
+        // find out what the group is, an operator, a number, or a variable.
+        // TODO add variables
+        if !Operator::is_operator(group.chars().last().unwrap()) {
+            let possible_num = group.parse::<f64>();
+            match possible_num {
+                Ok(valid) => {stack.push(valid);},
+                Err(_whatever) => {
+                    eprint!("weird error happened, ending process..."); 
+                    std::process::exit(2);
+                },
+            }
+            dbg!(&stack);
+        }
+        else {
+            let op: Operator = Operator::get_operator(group.chars().last().unwrap()).unwrap();
+            dbg!(&op);
+            let right = stack.pop().unwrap();
+            let left = stack.pop().unwrap();
+
+            if op == ADDITION {
+                stack.push(left + right);
+            }
+
+            else if op == SUBTRACTION {
+                stack.push(left - right);
+            }
+
+            else if op == MULTIPLICATION {
+                stack.push(left * right);
+            }
+
+            else if op == DIVISION {
+                stack.push(left / right);
+            }
+
+            else if op == EXPONENTIATION {
+                stack.push(left.powf(right));
+            }
+
+            else {
+                todo!();
+            }
+        }
+    }
+
+
+    if stack.is_empty() {
+        return Err("result stack empty".to_string());
+    }
+    if stack.len() > 1 {
+        dbg!(stack);
+        return Err("result stack has too many results.".to_string());
+    }
+    return Ok(stack[0]);
+
 }
