@@ -29,7 +29,7 @@ impl fmt::Debug for Associativity {
 
 #[derive(PartialEq)]
 pub struct Operator {
-    character: char,
+    visual: Vec<String>,
     precedence: u8,
     associativity: Associativity
 }
@@ -37,7 +37,7 @@ pub struct Operator {
 impl fmt::Debug for Operator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Operator")
-            .field("character", &self.character)
+            .field("character", &self.visual)
             .field("precedence", &self.precedence)
             .field("associativity", &self.associativity)
             .finish()
@@ -45,51 +45,53 @@ impl fmt::Debug for Operator {
 }
 
 impl Operator {
-    pub fn is_operator(c: char) -> bool {
+    pub fn is_operator(vis: &str) -> bool {
         for op in OPERATORS {
-            if c == op.character { return true; }
+            for item in op.visual {
+                if vis == item { return true; }
+            }
         }
         return false;
     }
 
-    pub fn get_operator(c: char) -> Option<Operator> {
-        match c {
-            '+' => Some(ADDITION),
-            '-' => Some(SUBTRACTION),
-            '*' => Some(MULTIPLICATION),
-            '/' => Some(DIVISION),
-            '^' => Some(EXPONENTIATION),
+    pub fn get_operator(vis: &str) -> Option<Operator> {
+        match vis {
+            "+" => Some(ADDITION),
+            "-" => Some(SUBTRACTION),
+            "*" => Some(MULTIPLICATION),
+            "/" => Some(DIVISION),
+            "^" => Some(EXPONENTIATION),
             _ => None
         }
     }
 }
 
 const ADDITION: Operator = Operator {
-    character: '+',
+    visual: vec!["+".to_string()],
     precedence: 2,
     associativity: Associativity::Left
 };
 
 const SUBTRACTION: Operator = Operator {
-    character: '-',
+    visual: vec!["-".to_string()],
     precedence: 2,
     associativity: Associativity::Left
 };
 
 const MULTIPLICATION: Operator = Operator {
-    character: '*',
+    visual: vec!["*".to_string()],
     precedence: 3,
     associativity: Associativity::Left
 };
 
 const DIVISION: Operator = Operator {
-    character: '/',
+    visual: vec![":".to_string(), "/".to_string()],
     precedence: 3,
     associativity: Associativity::Left
 };
 
 const EXPONENTIATION: Operator = Operator {
-    character: '^',
+    visual: vec!["^".to_string(), "**".to_string()],
     precedence: 4,
     associativity: Associativity::Right
 };

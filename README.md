@@ -22,3 +22,4 @@ compiled binary executable to `/usr/local/bin`.
 | Current                 | x86_64 |
 | Planned                 | major arm |
 | Not Planned             | any legacy |
+
