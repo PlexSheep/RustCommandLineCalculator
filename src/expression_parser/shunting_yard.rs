@@ -105,6 +105,7 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
     let mut currently_processing_numeric_group = false;
     let mut current_numeric_group: Vec<char> = Vec::new();
     let mut current_numeric_group_has_point = false;
+    let mut token_stack : Vec<char> = Vec::new();
 
     // while there are tokens to br read:
     while !(input_queue.is_empty()) {
@@ -130,7 +131,7 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
         // handled by the expression parser
 
         // a operator o1
-        else if Operator::is_operator(token) {
+        else if Operator::is_operator(token.to_string().as_str()) {
 
             // numeric group is done, push it.
             if currently_processing_numeric_group {
@@ -140,11 +141,30 @@ pub fn form_reverse_polish_notation(regular_math: &str) -> Result<Vec<String>, S
                 current_numeric_group_has_point = false;
             }
 
-            // (get the constant Operator (which is a struct) that fits to that token.)
-            let o1 = match Operator::get_operator(token) {
-                Some(valid_op) => valid_op,
-                None => {panic!("Operator '{}' not found.", token);},
-            };
+            let mut o1: Operator;
+            // logic for operators representet as multiple chars
+            match token {
+                '*' => {
+                    // check if last token was also a *, if yes, then the user requests
+                    // exponentiation.
+                    
+                    // for now:
+                    o1 = MULTIPLICATION;
+                },
+                '+' => {o1 = ADDITION}, 
+                '-' => {o1 = SUBTRACTION}, 
+                ':'|'/' => {o1 = DIVISION}, 
+                '^' => {o1 = EXPONENTIATION},
+                _ => (),
+            }
+            let o1 = o1;
+
+            // Only works for single char operators
+            //// (get the constant Operator (which is a struct) that fits to that token.)
+            //let o1 = match Operator::get_operator(token) {
+            //    Some(valid_op) => valid_op,
+            //    None => {panic!("Operator '{}' not found.", token);},
+            //};
 
             // while there is an operator o2 at the top of the stack 
             if !operator_stack.is_empty() {
