@@ -8,16 +8,3 @@ and bugs might not only be possible but common.
 
 # Install
 rclc is still in an early version, but if you wish, you can compile and install it using `cargo install --path .`, this will copy a release version to `$HOME/.cargo/bin`. Otherweise, you can compile rclc manually using `cargo build --release` and copy the binary in  `target/release/rclc` to a directory of your choice.
-
-# Compatability
-| Supported OS | OS                    |
-|--------------|-----------------------|
-| Current      | Gnu/Linux             |
-| Planned      | Windows, OSX, FreeBSD |
-| Not Planned  | TempleOS              |
-
-| Supported Architectures | Arch   |
-|-------------------------|--------|
-| Current                 | x86_64 |
-| Planned                 | major arm |
-| Not Planned             | any legacy |
