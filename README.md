@@ -3,22 +3,8 @@ RustCommandLineCalcuator, or simply rclc for short is a fast, scriptable calcula
 designed to run right in your shell. No more need to use the python shell, or ugly and bloated
 GUIs. Easily calculate complex formulas in your bash scripts.
 
-Currently, rclc's status is `indev`. This means that important major features are still missing
+Currently, rclc's status is `alpha`. This means that important major features are still missing
 and bugs might not only be possible but common.
 
 # Install
-Not yet recommended, but you can always compile rclc by yourself with `cargo build` and copy the
-compiled binary executable to `/usr/local/bin`.
-
-# Compatability
-| Supported OS | OS                    |
-|--------------|-----------------------|
-| Current      | Linux                 |
-| Planned      | Windows, OSX, FreeBSD |
-| Not Planned  | TempleOS              |
-
-| Supported Architectures | Arch   |
-|-------------------------|--------|
-| Current                 | x86_64 |
-| Planned                 | major arm |
-| Not Planned             | any legacy |
+rclc is still in an early version, but if you wish, you can compile and install it using `cargo install --path .`, this will copy a release version to `$HOME/.cargo/bin`. Otherweise, you can compile rclc manually using `cargo build --release` and copy the binary in  `target/release/rclc` to a directory of your choice.
